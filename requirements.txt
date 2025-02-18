@@ -1,0 +1,4 @@
+undetected-chromedriver>=3.5.0
+selenium>=4.10.0
+discord-webhook>=1.1.0
+Pillow>=10.0.0
