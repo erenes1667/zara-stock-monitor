@@ -15,8 +15,12 @@ logger = logging.getLogger(__name__)
 
 class StockBot(commands.Bot):
     def __init__(self):
+        # Set up all required intents
         intents = discord.Intents.default()
         intents.message_content = True
+        intents.guilds = True
+        intents.messages = True
+        
         super().__init__(command_prefix='!', intents=intents)
         
         # Remove default help command to use our custom one
