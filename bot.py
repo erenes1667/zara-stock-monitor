@@ -19,14 +19,11 @@ class StockBot(commands.Bot):
         intents.message_content = True
         super().__init__(command_prefix='!', intents=intents)
         
+        # Remove default help command to use our custom one
+        self.remove_command('help')
+        
         # Initialize browser
         self.browser = BrowserHandler()
-        
-        # Add commands
-        self.add_command(commands.Command(self.add_product, name='monitor'))
-        self.add_command(commands.Command(self.list_products, name='list'))
-        self.add_command(commands.Command(self.remove_product, name='remove'))
-        self.add_command(commands.Command(self.help_command, name='help'))
         
     async def setup_hook(self):
         # Add stock monitoring cog
@@ -35,22 +32,62 @@ class StockBot(commands.Bot):
     async def on_ready(self):
         logger.info(f'Bot is ready! Logged in as {self.user.name}')
         
+    async def close(self):
+        """Clean up resources when bot shuts down."""
+        self.browser.close()
+        await super().close()
+
+class Commands(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+    
+    @commands.command(name='monitor')
     async def add_product(self, ctx, store: str = None, url: str = None, *sizes):
         """Add a product to monitor. Example: !monitor zara https://www.zara.com/... S M L"""
-        cog = self.get_cog('StockMonitorCog')
-        await cog.add_product(ctx, store, url, *sizes)
-        
+        if not store:
+            stores_list = '\n'.join([f"• {name}" for code, name in STORES.items()])
+            await ctx.send(f"Please specify a store. Available stores:\n{stores_list}\n\nExample: !monitor zara https://zara.com/... S M L")
+            return
+            
+        store = store.lower()
+        if store not in STORES:
+            await ctx.send(f"Invalid store. Available stores: {', '.join(STORES.values())}")
+            return
+            
+        if not url:
+            await ctx.send("Please provide the product URL.")
+            return
+            
+        if not sizes:
+            await ctx.send("Please specify at least one size to monitor.")
+            return
+            
+        monitor_cog = self.bot.get_cog('StockMonitorCog')
+        if monitor_cog:
+            await monitor_cog.add_product(ctx, store, url, *sizes)
+        else:
+            await ctx.send("Error: Monitor system not initialized!")
+    
+    @commands.command(name='list')
     async def list_products(self, ctx):
         """List all monitored products in this channel."""
-        cog = self.get_cog('StockMonitorCog')
-        await cog.list_products(ctx)
-        
+        monitor_cog = self.bot.get_cog('StockMonitorCog')
+        if monitor_cog:
+            await monitor_cog.list_products(ctx)
+        else:
+            await ctx.send("Error: Monitor system not initialized!")
+    
+    @commands.command(name='remove')
     async def remove_product(self, ctx, index: int = None):
         """Remove a product from monitoring. Use !list to see indices."""
-        cog = self.get_cog('StockMonitorCog')
-        await cog.remove_product(ctx, index)
-        
-    async def help_command(self, ctx):
+        monitor_cog = self.bot.get_cog('StockMonitorCog')
+        if monitor_cog:
+            await monitor_cog.remove_product(ctx, index)
+        else:
+            await ctx.send("Error: Monitor system not initialized!")
+    
+    @commands.command(name='info')
+    async def info_command(self, ctx):
         """Show help information."""
         help_embed = discord.Embed(
             title="🛍️ Stock Monitor - Commands",
@@ -62,7 +99,7 @@ class StockBot(commands.Bot):
             "!monitor <store> <url> <sizes...>": "Start monitoring a product\nExample: !monitor zara https://zara.com/... S M L",
             "!list": "Show all monitored products",
             "!remove [number]": "Stop monitoring a product (use !list to see numbers)",
-            "!help": "Show this help message"
+            "!info": "Show this help message"
         }
         
         for cmd, desc in commands.items():
@@ -77,12 +114,13 @@ class StockBot(commands.Bot):
             
         await ctx.send(embed=help_embed)
         
-    async def close(self):
-        """Clean up resources when bot shuts down."""
-        self.browser.close()
-        await super().close()
-        
 def run_bot(token: str):
     """Run the bot with the given token."""
     bot = StockBot()
+    
+    @bot.event
+    async def setup_hook():
+        await bot.add_cog(Commands(bot))
+        await bot.add_cog(StockMonitorCog(bot, bot.browser))
+    
     bot.run(token)
