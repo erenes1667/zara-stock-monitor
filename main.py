@@ -1,6 +1,10 @@
 import os
 import logging
+from dotenv import load_dotenv
 from bot import run_bot
+
+# Load environment variables
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(
