@@ -26,7 +26,8 @@ class StockBot(commands.Bot):
         self.browser = BrowserHandler()
         
     async def setup_hook(self):
-        # Add stock monitoring cog
+        # Add stock monitoring cog and commands
+        await self.add_cog(Commands(self))
         await self.add_cog(StockMonitorCog(self, self.browser))
         
     async def on_ready(self):
@@ -117,10 +118,4 @@ class Commands(commands.Cog):
 def run_bot(token: str):
     """Run the bot with the given token."""
     bot = StockBot()
-    
-    @bot.event
-    async def setup_hook():
-        await bot.add_cog(Commands(bot))
-        await bot.add_cog(StockMonitorCog(bot, bot.browser))
-    
     bot.run(token)
