@@ -1,0 +1,13 @@
+{
+    "products": [
+        {
+            "url": "https://www.zara.com/your-product-url",
+            "sizes": ["XS", "S", "M", "L", "XL"],
+            "name": "Example Product Name",
+            "price": null
+        }
+    ],
+    "discord_webhook_url": "YOUR_DISCORD_WEBHOOK_URL",
+    "check_interval_min": 300,
+    "check_interval_max": 600
+}
